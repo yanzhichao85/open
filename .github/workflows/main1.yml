@@ -1,0 +1,52 @@
+name: Build Tinker Board OpenWrt
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04  # 用更稳定的系统版本
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential libncurses5-dev libncursesw5-dev git unzip gawk gettext libssl-dev libelf-dev python3 python3-pip
+
+      - name: Clone ImmortalWrt
+        run: |
+          git clone --depth=1 -b v23.05.4 https://gitee.com/openwrt-mirror/openwrt.git
+          cd openwrt
+          sed -i 's|git.openwrt.org|gitee.com/openwrt-mirror|g' feeds.conf.default
+          sed -i 's|downloads.openwrt.org|mirrors.tuna.tsinghua.edu.cn/openwrt|g' feeds.conf.default
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Generate config
+        run: |
+          cd openwrt
+          cat > .config <<EOF
+          CONFIG_TARGET_rockchip=y
+          CONFIG_TARGET_rockchip_armv7=y
+          CONFIG_TARGET_rockchip_armv7_DEVICE_asus_tinkerboard=y
+          CONFIG_PACKAGE_luci=y
+          EOF
+          make defconfig
+
+      - name: Download packages
+        run: |
+          cd openwrt
+          make -j$(nproc) download V=s
+
+      - name: Build firmware
+        run: |
+          cd openwrt
+          make -j$(nproc) V=s
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: openwrt-tinkerboard-firmware
+          path: openwrt/bin/targets/rockchip/armv7/*.img.gz
