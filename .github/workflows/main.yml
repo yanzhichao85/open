@@ -1,0 +1,52 @@
+name: Build Tinker Board OpenWrt
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4.2.1  # 修复 Node.js 20 弃用警告
+
+      - name: Free up disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ghc
+          df -h
+
+      - name: Install build dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y build-essential libncurses5-dev libncursesw5-dev git unzip gawk gettext libssl-dev libelf-dev python3 python3-pip
+
+      - name: Clone ImmortalWrt source
+        run: |
+          git clone --depth=1 -b v23.05.4 https://github.com/immortalwrt/immortalwrt.git
+          cd immortalwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: Load Tinker Board default config
+        run: |
+          cd immortalwrt
+          cp config/rockchip/armv7/config-tinkerboard .config
+          make defconfig
+
+      - name: Download all packages
+        run: |
+          cd immortalwrt
+          make -j$(nproc) download V=s || make -j1 download V=s
+
+      - name: Build firmware
+        run: |
+          cd immortalwrt
+          make -j$(nproc) V=s
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4.4.3  # 同步升级版本
+        with:
+          name: openwrt-tinkerboard-firmware
+          path: immortalwrt/bin/targets/rockchip/armv7/*.img.gz
