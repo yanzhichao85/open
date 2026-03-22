@@ -55,15 +55,14 @@ jobs:
         with:
           name: openwrt-tinkerboard-firmware
           path: immortalwrt/bin/targets/rockchip/armv7/*.img.gz
-          - name: 上传固件到 GitHub Releases
-        uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')  # 仅在打 Tag 时触发，可按需修改
-        with:
-          files: |
-            ${{ github.workspace }}/immortalwrt/bin/targets/rockchip/armv8/*.img.gz
-            ${{ github.workspace }}/immortalwrt/bin/targets/rockchip/armv8/*.sysupgrade.bin
-          body: |
-            ### 🎉 自动构建固件
-            - 构建时间: ${{ steps.date.outputs.date }}
-            - 提交哈希: ${{ github.sha }}
-          token: ${{ secrets.GITHUB_TOKEN }}
+        - name: 上传固件到 GitHub Releases
+  uses: softprops/action-gh-release@v1
+  if: startsWith(github.ref, 'refs/tags/')
+  with:
+    files: |
+      ${{ github.workspace }}/immortalwrt/bin/targets/rockchip/armv8/*.img.gz
+      ${{ github.workspace }}/immortalwrt/bin/targets/rockchip/armv8/*.sysupgrade.bin
+    body: |
+      自动构建固件
+      构建时间: ${{ github.sha }}
+    token: ${{ secrets.GITHUB_TOKEN }}
